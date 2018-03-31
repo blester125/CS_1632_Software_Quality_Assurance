@@ -1,0 +1,152 @@
+\documentclass[titlepage]{article}
+%Compile with pdflatex%
+\title{CS 1632 -- DELIVERABLE 5\\
+Performance Testing Conway's Game of Life\\
+Project under Test: JavaLife\\
+\small{\url{https://github.com/blester125/SlowLifeGUI}}}
+\author{Brian Lester}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{amsmath}
+\newcommand{\testcase}[7]{IDENTIFIER: {#1}\\
+TEST CASE: {#2}\\
+PRECONDITIONS: {#3}\\
+INPUT VALUES: {#4}\\
+EXECUTION STEPS: {#5}\\
+OUTPUT VALUES: {#6}\\
+POSTCONDITIONS: {#7}\\
+\\
+}
+\begin{document}
+\maketitle
+\section{Summary}
+For deliverable 5 I profiled the Game of Life provided with the Visual VM 
+profiler. In the deliverable description, the code was described as non 
+performent. This meant that the CPU time for each method was most likely a good 
+metric for finding methods that were causing problems. By running the Game of 
+Live, Visual VM, and using the CPU sampler I looked for ``Hot Spots''. This 
+identified the method convertToInt(int x) in the MainPanel class was a 
+``Hot Spot''. This is where I began my investigation.
+
+This method was the highest on the profiler list so I investigated it. Once I 
+looked at it I saw that the method was converting ``int''s to ``int''s which 
+means that it probably doing extra stuff because the entire method seem pretty 
+pointless. Upon closer inspection I found that function was creating a large 
+string that it would concatenate the ``int x'' onto then call the Integer.
+parseInt() method on it. This is clearly extra and pointless operations so I 
+decided that I could refactor this code to fix the problem.
+
+Using exploratory testing I found that the method acted as follows. 
+\[
+	\begin{cases}
+		NumberFormatException & x < 0\\
+		x & x \geq 0\\
+	\end{cases}
+\]
+Once I figured out how the method worked I wrote the required pinning test to 
+show that I did not change the functionality of the program. First I changed the 
+method declaration from private to public to make testing easier. I first wrote 
+test 
+for the three equivalence class, negative numbers, zero, and positive numbers. 
+For the negative number equivalence class I created a test to see if it still 
+throw the ``NumberFormatException'' because the pinning tests are for current 
+behavior not expected behavior. Finally I wrote a property based test for the 
+method. The property that I tested was that when a number greater than 0 is 
+passed in it returns the same number. I tested this by randomly testing the 
+method with 100 integers between 0 and 400. The pinning tests can be found in the 
+``MainPanelTest.java'' file.
+
+After fixing the ``converToInt()'' method I ran the profiler again and examined 
+the profile when I write to the file. This identified the ``Cell.toString''
+method as a ``Hot Spot''. When I was exploratory testing I had 
+noticed that the file output was really slow so this makes sense as a 
+``Hot Spot''. 
+
+After examination I found that the method worked like so.
+\[  
+	\begin{cases}
+		\text{``X''} & \text{text starts with X} \\ 
+		\text{``.''} & \text{text doesn't start with X} \\
+	\end{cases}
+\] 
+I wrote pinning tests to confirm this behavior after the refactor. The pinning 
+tests can be found in the ``CellTest.java'' file.
+
+Running the profiler again I found another hotspot. The profiler identified Thread.sleep() as the hotspot but this seemed to used for user input so I kept looking. The first method that I could reasonably change (The first method that was not a jswing function) was the MainPanel.runContinuous() function. Investigating I found a loop that ran a bunch and changed the ``\_r'' value. However, before the loop the value of ``\_r'' is saved into a variable ``origR'' and after the loop the value of ``\_r'' is overwritten by ``origR''. This means that the value of ``\_r'' is not changed by the loop so it could be taken out. Pinning tests for this method are manual and are included in this document.
+
+The included screen shots show that the refactored methods are no longer a ``Hot 
+Spots'' and the JUint screen shots show that the behavior of the methods were not 
+changed.
+
+\newpage
+\section{Before Refactoring of MainPanel.convertToInt()}
+\subsection{Profiler ScreenShot}
+\includegraphics[width=\textwidth, natwidth=975,natheight=425]{hotSpotMethod.png}
+\subsection{Pinning Tests}
+\includegraphics[width=.75\textwidth, natwidth=400,natheight=640]{Old_Tests.png}
+\section{After Refactoring of MainPanel.convertToInt()}
+\subsection{Profiler ScreenShot}
+\includegraphics[width=\textwidth, natwidth=978,natheight=296]{newhotspot.png}
+\subsection{Pinning Tests}
+\includegraphics[width=.75\textwidth, natwidth=400,natheight=640]{New_Tests.png}
+
+\section{Before Refactoring of Cell.toString()}
+\subsection{Profiler ScreenShot}
+\includegraphics[width=\textwidth, natwidth=978,natheight=425]{HotSpot2.png}
+\subsection{Pinning Tests}
+\includegraphics[width=.75\textwidth, natwidth=400,natheight=640]{Old_toStringTests.png}
+\section{After Refactoring of Cell.toString()}
+\subsection{Profiler ScreenShot}
+\includegraphics[width=\textwidth, natwidth=978,natheight=275]{newHotSpot2.png}
+\subsection{Pinning Tests}
+\includegraphics[width=.75\textwidth, natwidth=400,natheight=640]{New_StringTests.png}
+
+\section{Before Refactoring of MainPanel.runCountinous()}
+\subsection{Profiler ScreenShot}
+\includegraphics[width=\textwidth, natwidth=727, natheight=230]{3rdHotSpot.png}
+\subsection{Pinning Tests}
+This method would be very difficult to test with automatic tests so we will need to use manual testing.\\
+\\
+\testcase
+{1. FUN-BUTTON-STARTS-THE-GAME}
+{Testing that pressing the run continuous button runs the game}
+{\\
+ The Board is 8x8.\\
+ The cells at row 0 column 1, row 1 column 2, row 2 column 0,1,2 are alive.}
+{N/A}
+{Click the ``Run Continuous'' button}
+{N/A}
+{The game should begin and cells should start changing}
+\testcase
+{2. FUN-MOVE-2-ITERATIONS}
+{Move multiple iterations}
+{\\
+ The Board is 8x8.\\
+ The cells at row 0 column 1, row 1 column 2, row 2 column 0,1,2 are alive.}
+{N/A}
+{Press the ``Run Continuous'' button.\\
+Let the game run for  iterations.\\
+Press the ``Stop'' button.}
+{N/A}
+{The cells at row 1 column 2, row 2 column 0 and 2, row 3 column 1 and 2 are alive.}
+\testcase
+{3. FUN-UNDO-AFTER-RUN}
+{Try to undo after running for a bit.}
+{\\
+ The Board is 8x8.\\
+ The cells at row 0 column 1, row 1 column 2, row 2 column 0,1,2 are alive.}
+{N/A}
+{Press the ``Run Continuous'' button.\\
+Let the game run for  iterations.\\
+Press the ``Stop'' button.\\
+Press the ``Undo'' button.}
+{N/A}
+{The cells at row 1 column 0 and 2, row 2 column 1 and 2, row 3 column 1 are alive.}
+
+\section{After Refactoring of MainPanel.runContinous()}
+\subsection{Profiler ScreenShot}
+\includegraphics[width=\textwidth, natwidth=978, natheight=212]{3rdHotSpotFixed.png}
+\subsection{Pinning Tests}
+All the manual test should still pass.
+\end{document}

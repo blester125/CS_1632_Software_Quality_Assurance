@@ -1,0 +1,29 @@
+\documentclass[titlepage,12pt]{article}
+\title{CS 1632 - DELIVERABLE 2:\\ 
+Unit Testing and Code Coverage\\
+{\small https://github.com/blester125/CS\_1632\_deliverable2}}
+\author{Brian Lester}
+\usepackage{graphicx}
+\begin{document}
+\maketitle
+\section{Descriptions of Issues}
+The biggest Issue I had while creating the JUnit tests in this project was
+methods that called other methods that were part of the same Object that 
+was under test. I was unable to figure out exactly how to stub a method so
+that I could verify that it was called while having a real object that I 
+could call the method I was testing with.
+
+Writing test also changed my coding style. Many of my functions returned 
+void or used global variables rather than passing in parameters. A similar 
+example of this was that at the start my parseInput function read from 
+stdin itself. This was hard to test so I rewrote it so that it recived 
+input as a parameter which was much easier to test. This shift in style 
+seems to be similar to the shift towards functional programming. I feel 
+that writing these test helped clean up the quality of my code.
+\newpage
+\section{Unit Tests}
+\includegraphics[,natwidth=324,natheight=417]{AllGreen.png}
+\newpage
+\section{Code Coverage}
+\includegraphics[scale=0.9,natwidth=634,natheight=71]{CodeCoverage.png}
+\end{document}
